@@ -1,214 +1,218 @@
-from tkinter import *   # syntax for importing all classes from tkinter
-from mydb import Database
+"""Tkinter interface for NLPApp."""
+from __future__ import annotations
+
+import threading
+from pathlib import Path
+import tkinter as tk
 from tkinter import messagebox
-from myapi import API
+
+from myapi import API, APIError
+from mydb import Database, DatabaseError
+
 
 class NLPApp:
-
-    def __init__(self):
-
-        # creating database object
+    def __init__(self, root: tk.Tk | None = None) -> None:
         self.dbo = Database()
-
         self.apio = API()
+        self.root = root or tk.Tk()
+        self.root.title("NLPApp")
+        self.root.geometry("350x600")
+        self.root.configure(bg="red")
+        self.root.minsize(320, 500)
 
-        # loading login gui
-        self.root = Tk()    # Tk is the main class inside tkinter so here we are making an object of this class
-        self.root.title("NLPApp")   # changing the title of the app
-        self.root.iconbitmap(r"c:\campusx\nlpapp\PythonProject\resources\favicon.ico")   # changing the icon in the title bar of the app
-        self.root.geometry("350x600")   # adjusting the size of gui app
-        self.root.configure(bg = "red")    # adjusting the background color of the app
+        icon_path = Path(__file__).parent / "resources" / "favicon.ico"
+        if icon_path.is_file():
+            try:
+                self.root.iconbitmap(str(icon_path))
+            except tk.TclError:
+                # The app remains usable if the platform cannot load .ico files.
+                pass
 
         self.login_gui()
+        if root is None:
+            self.root.mainloop()
 
-        self.root.mainloop()   # the role of this method is to hold the gui on the screen
-
-
-    def login_gui(self):
-        """login functionality and gui operations"""
-
-        self.clear()    # clear the existing gui first
-
-        heading = Label(self.root, text = "NLP Application GUI", bg = "red", fg = "white")    # display heading on the app using Label class; it takes two arguements: gui object and text to display
-        heading.pack(pady = (30, 30))    # to display heading ui component on the app, we need to explicitly tell the tkinter to put that in gui; to do this we use geometry managers; there are two geometry managers in tkinter: `pack` and `grid`, we will use pack in this case; `pady` is used to do padding in y direction by 30 pixels in both upward and downward side
-        heading.configure(font = ("verdana", 18, "italic"))     # changing the writing style of the font in heading
-
-        # creating text for email entry
-        label1 = Label(self.root, text = "Enter your email")
-        label1.pack(pady = (10,10))
-        self.email_input = Entry(self.root, width = 30)     # creating entry box for email; width is the width of entry box
-        self.email_input.pack(pady = (5,10), ipady = 3)     # `ipady` is the internal padding and it means height of the entry box
-
-        # creating text for password entry
-        label2 = Label(self.root, text="Enter your password")
-        label2.pack(pady=(10, 10))
-        self.password_input = Entry(self.root, width=30, show = "*")    # `show` is for showing the typed password in ******.. from
-        self.password_input.pack(pady=(5, 10), ipady=3)
-
-
-        # creating login button
-        login_btn = Button(self.root, text = "LOGIN", width = 20, height = 2, command = self.perform_login)
-        login_btn.pack(pady = (10,10))
-
-        #creating text and button for registration of new users
-        label3 = Label(self.root, text="Not a Member?")
-        label3.pack(pady=(20, 10))
-
-        redirect_btn = Button(self.root, text="Register Now", command = self.register_gui)      # command is for detecting if somebody has clicked on the button and what to do if the button has been clicked
-        redirect_btn.pack(pady=(10, 10))
-
-
-    def register_gui(self):
-        """register functionality and gui operations"""
-
-        self.clear()    # clear the existing gui first
-
-
-        # registration flow similar to login
-        heading = Label(self.root, text="NLP Application GUI", bg="red", fg="white")
+    def _heading(self, text: str = "NLP Application GUI") -> None:
+        heading = tk.Label(
+            self.root, text=text, bg="red", fg="white",
+            font=("verdana", 18, "italic"),
+        )
         heading.pack(pady=(30, 30))
-        heading.configure(font=("verdana", 18, "italic"))
 
-        label0 = Label(self.root, text="Enter your name")
-        label0.pack(pady=(10, 10))
-        self.name_input = Entry(self.root, width=30)
-        self.name_input.pack(pady=(5, 10), ipady=3)
+    def clear(self) -> None:
+        for widget in self.root.pack_slaves():
+            widget.destroy()
 
-
-        # creating text for email entry
-        label1 = Label(self.root, text="Enter your email")
-        label1.pack(pady=(10, 10))
-        self.email_input = Entry(self.root, width=30)
+    def login_gui(self) -> None:
+        self.clear()
+        self._heading()
+        tk.Label(self.root, text="Enter your email").pack(pady=(10, 10))
+        self.email_input = tk.Entry(self.root, width=30)
         self.email_input.pack(pady=(5, 10), ipady=3)
-
-        # creating text for password entry
-        label2 = Label(self.root, text="Enter your password")
-        label2.pack(pady=(10, 10))
-        self.password_input = Entry(self.root, width=30, show="*")  # `show` is for showing the typed password in ******.. from
+        tk.Label(self.root, text="Enter your password").pack(pady=(10, 10))
+        self.password_input = tk.Entry(self.root, width=30, show="*")
         self.password_input.pack(pady=(5, 10), ipady=3)
+        tk.Button(
+            self.root, text="LOGIN", width=20, height=2,
+            command=self.perform_login,
+        ).pack(pady=(10, 10))
+        tk.Label(self.root, text="Not a Member?").pack(pady=(20, 10))
+        tk.Button(
+            self.root, text="Register Now", command=self.register_gui
+        ).pack(pady=(10, 10))
 
-        # creating login button
-        register_btn = Button(self.root, text="REGISTER", width=20, height=2, command = self.perform_registration)
-        register_btn.pack(pady=(10, 10))
+    def register_gui(self) -> None:
+        self.clear()
+        self._heading()
+        tk.Label(self.root, text="Enter your name").pack(pady=(10, 10))
+        self.name_input = tk.Entry(self.root, width=30)
+        self.name_input.pack(pady=(5, 10), ipady=3)
+        tk.Label(self.root, text="Enter your email").pack(pady=(10, 10))
+        self.email_input = tk.Entry(self.root, width=30)
+        self.email_input.pack(pady=(5, 10), ipady=3)
+        tk.Label(self.root, text="Enter your password (8+ characters)").pack(
+            pady=(10, 10)
+        )
+        self.password_input = tk.Entry(self.root, width=30, show="*")
+        self.password_input.pack(pady=(5, 10), ipady=3)
+        tk.Button(
+            self.root, text="REGISTER", width=20, height=2,
+            command=self.perform_registration,
+        ).pack(pady=(10, 10))
+        tk.Label(self.root, text="Already a Member?").pack(pady=(20, 10))
+        tk.Button(
+            self.root, text="Login Now", command=self.login_gui
+        ).pack(pady=(10, 10))
 
-        # creating text and button for registration of new users
-        label3 = Label(self.root, text="Already a Member?")
-        label3.pack(pady=(20, 10))
+    def perform_registration(self) -> None:
+        try:
+            created = self.dbo.add_data(
+                self.name_input.get(),
+                self.email_input.get(),
+                self.password_input.get(),
+            )
+        except ValueError as exc:
+            messagebox.showerror("Invalid details", str(exc))
+            return
+        except DatabaseError as exc:
+            messagebox.showerror("Database error", str(exc))
+            return
 
-        redirect_btn = Button(self.root, text="Login Now", command=self.login_gui)
-        redirect_btn.pack(pady=(10, 10))
-
-
-    def clear(self):
-        """clear the existing gui"""
-
-        for i in self.root.pack_slaves():
-            i.destroy()
-
-
-    def perform_registration(self):
-
-        # fetch data from gui
-        name = self.name_input.get()
-        email = self.email_input.get()
-        password = self.password_input.get()
-
-        response = self.dbo.add_data(name, email, password)
-        if response:
-            messagebox.showinfo("Success", "Registration successful. You can login now.")
+        if created:
+            messagebox.showinfo(
+                "Success", "Registration successful. You can login now."
+            )
+            self.login_gui()
         else:
             messagebox.showerror("Error", "Email already exists.")
 
-
-    def perform_login(self):
-
-        # fetch data from gui
-        email = self.email_input.get()
-        password = self.password_input.get()
-
-        response = self.dbo.search(email, password)
-        if response:
+    def perform_login(self) -> None:
+        try:
+            authenticated = self.dbo.search(
+                self.email_input.get(), self.password_input.get()
+            )
+        except DatabaseError as exc:
+            messagebox.showerror("Database error", str(exc))
+            return
+        if authenticated:
             messagebox.showinfo("Success", "Login successful.")
             self.home_gui()
         else:
             messagebox.showerror("Error", "Incorrect email or password.")
 
-
-    def home_gui(self):
-
+    def home_gui(self) -> None:
         self.clear()
+        self._heading()
+        for label, callback in (
+            ("Sentiment Analysis", self.sentiment_gui),
+            ("Named Entity Recognition", self.ner_gui),
+            ("Emotion Detection", self.emotion_gui),
+        ):
+            tk.Button(
+                self.root, text=label, width=25, height=3, command=callback
+            ).pack(pady=(10, 10))
+        tk.Button(
+            self.root, text="Logout", command=self.login_gui
+        ).pack(pady=(10, 10))
 
-        heading = Label(self.root, text="NLP Application GUI", bg="red", fg="white")
-        heading.pack(pady=(30, 30))
-        heading.configure(font=("verdana", 18, "italic"))
-
-        sentiment_btn = Button(self.root, text="Sentiment Analysis", width=25, height=3, command=self.sentiment_gui)
-        sentiment_btn.pack(pady=(10, 10))
-
-        ner_btn = Button(self.root, text="Named Entity Recognition", width=25, height=3, command=self.ner_gui)
-        ner_btn.pack(pady=(10, 10))
-
-        emotion_btn = Button(self.root, text="Emotion Detection", width=25, height=3, command=self.emotion_gui)
-        emotion_btn.pack(pady=(10, 10))
-
-        logout_btn = Button(self.root, text="Logout", command=self.login_gui)
-        logout_btn.pack(pady=(10, 10))
-
-
-    def sentiment_gui(self):
+    def sentiment_gui(self) -> None:
         self.nlp_task_gui("sentiment-analysis")
 
-    
-    def ner_gui(self):
+    def ner_gui(self) -> None:
         self.nlp_task_gui("ner")
-    
-    
-    def emotion_gui(self):
+
+    def emotion_gui(self) -> None:
         self.nlp_task_gui("emotion-detection")
-    
-    
-    def nlp_task_gui(self, task):
+
+    def nlp_task_gui(self, task: str) -> None:
+        headings = {
+            "sentiment-analysis": ("Sentiment Analysis", "Analyze Sentiment"),
+            "ner": ("Named Entity Recognition", "Do Named Entity Recognition"),
+            "emotion-detection": ("Emotion Detection", "Do Emotion Detection"),
+        }
+        if task not in headings:
+            messagebox.showerror("Error", "Unsupported NLP task.")
+            self.home_gui()
+            return
 
         self.clear()
-        if task == "sentiment-analysis":
-            heading_text = "Sentiment Analysis"
-            button_text = "Analyze Sentiment"
-        elif task == "ner":
-            heading_text = "Named Entity Recognition"
-            button_text = "Do Named Entity Recognition"
-        elif task == "emotion-detection":
-            heading_text = "Emotion Detection"
-            button_text = "Do Emotion Detection"
-
-        heading = Label(self.root, text="NLP Application GUI", bg="red", fg="white")
-        heading.pack(pady=(30, 30))
-        heading.configure(font=("verdana", 18, "italic"))
-
-        heading2 = Label(self.root, text=heading_text, bg="red", fg="white")
-        heading2.pack(pady=(10, 20))
-        heading2.configure(font=("verdana", 14))
-
-        label1 = Label(self.root, text="Enter the text")
-        label1.pack(pady=(20, 10))
-        self.nlp_task_input = Entry(self.root, width=30)
+        self._heading()
+        heading_text, button_text = headings[task]
+        tk.Label(
+            self.root, text=heading_text, bg="red", fg="white",
+            font=("verdana", 14),
+        ).pack(pady=(10, 20))
+        tk.Label(self.root, text="Enter the text").pack(pady=(20, 10))
+        self.nlp_task_input = tk.Entry(self.root, width=30)
         self.nlp_task_input.pack(pady=(5, 10), ipady=3)
-
-        nlp_btn = Button(self.root, text=button_text, command = lambda: self.do_nlp_task(task))
-        nlp_btn.pack(pady=(10, 10))
-
-        self.nlp_task_result = Label(self.root, text="", bg = "red", fg = "white")
+        self.nlp_task_button = tk.Button(
+            self.root, text=button_text,
+            command=lambda: self.do_nlp_task(task),
+        )
+        self.nlp_task_button.pack(pady=(10, 10))
+        self.nlp_task_result = tk.Label(
+            self.root, text="", bg="red", fg="white",
+            font=("verdana", 12, "bold"), wraplength=300,
+        )
         self.nlp_task_result.pack(pady=(20, 10))
-        self.nlp_task_result.configure(font=("verdana", 12, "bold"))
+        tk.Button(
+            self.root, text="Go Back", command=self.home_gui
+        ).pack(pady=(10, 10))
 
-        goback_btn = Button(self.root, text="Go Back", command = self.home_gui)
-        goback_btn.pack(pady=(10, 10))
+    def do_nlp_task(self, task: str) -> None:
+        text = self.nlp_task_input.get().strip()
+        if not text:
+            messagebox.showerror("Input required", "Please enter some text to analyze.")
+            return
 
-    
-    def do_nlp_task(self, task):
-        text = self.nlp_task_input.get()
-        result = self.apio.nlp_task(task, text)
-        self.nlp_task_result["text"] = result
+        self.nlp_task_button.config(state=tk.DISABLED)
+        self.nlp_task_result.config(text="Analyzing...")
+
+        def worker() -> None:
+            try:
+                result = self.apio.nlp_task(task, text)
+                self.root.after(0, self._show_result, result, None)
+            except (APIError, ValueError) as exc:
+                self.root.after(0, self._show_result, None, str(exc))
+            except Exception:
+                # Avoid exposing internals or user text in an unexpected-error dialog.
+                self.root.after(
+                    0, self._show_result, None,
+                    "An unexpected error occurred while analyzing the text.",
+                )
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_result(self, result: str | None, error: str | None) -> None:
+        try:
+            self.nlp_task_button.config(state=tk.NORMAL)
+            self.nlp_task_result.config(text=error or result or "")
+            if error:
+                messagebox.showerror("NLP service error", error)
+        except tk.TclError:
+            # The user may have navigated away or closed the window mid-request.
+            pass
 
 
-
-nlp = NLPApp()
+if __name__ == "__main__":
+    NLPApp()
