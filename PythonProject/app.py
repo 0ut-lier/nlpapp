@@ -1,6 +1,7 @@
 from tkinter import *   # syntax for importing all classes from tkinter
 from mydb import Database
 from tkinter import messagebox
+from myapi import API
 
 class NLPApp:
 
@@ -9,11 +10,12 @@ class NLPApp:
         # creating database object
         self.dbo = Database()
 
-        # loading login gui
+        self.apio = API()
 
+        # loading login gui
         self.root = Tk()    # Tk is the main class inside tkinter so here we are making an object of this class
         self.root.title("NLPApp")   # changing the title of the app
-        self.root.iconbitmap("resources/favicon.ico")   # changing the icon in the title bar of the app
+        self.root.iconbitmap(r"c:\campusx\nlpapp\PythonProject\resources\favicon.ico")   # changing the icon in the title bar of the app
         self.root.geometry("350x600")   # adjusting the size of gui app
         self.root.configure(bg = "red")    # adjusting the background color of the app
 
@@ -143,10 +145,10 @@ class NLPApp:
         sentiment_btn = Button(self.root, text="Sentiment Analysis", width=25, height=3, command=self.sentiment_gui)
         sentiment_btn.pack(pady=(10, 10))
 
-        ner_btn = Button(self.root, text="Named Entity Recognition", width=25, height=3, command=self.perform_registration)
+        ner_btn = Button(self.root, text="Named Entity Recognition", width=25, height=3, command=self.ner_gui)
         ner_btn.pack(pady=(10, 10))
 
-        emotion_btn = Button(self.root, text="Emotion Detection", width=25, height=3, command=self.perform_registration)
+        emotion_btn = Button(self.root, text="Emotion Detection", width=25, height=3, command=self.emotion_gui)
         emotion_btn.pack(pady=(10, 10))
 
         logout_btn = Button(self.root, text="Logout", command=self.login_gui)
@@ -154,34 +156,59 @@ class NLPApp:
 
 
     def sentiment_gui(self):
+        self.nlp_task_gui("sentiment-analysis")
+
+    
+    def ner_gui(self):
+        self.nlp_task_gui("ner")
+    
+    
+    def emotion_gui(self):
+        self.nlp_task_gui("emotion-detection")
+    
+    
+    def nlp_task_gui(self, task):
 
         self.clear()
+        if task == "sentiment-analysis":
+            heading_text = "Sentiment Analysis"
+            button_text = "Analyze Sentiment"
+        elif task == "ner":
+            heading_text = "Named Entity Recognition"
+            button_text = "Do Named Entity Recognition"
+        elif task == "emotion-detection":
+            heading_text = "Emotion Detection"
+            button_text = "Do Emotion Detection"
 
         heading = Label(self.root, text="NLP Application GUI", bg="red", fg="white")
         heading.pack(pady=(30, 30))
         heading.configure(font=("verdana", 18, "italic"))
 
-        heading2 = Label(self.root, text="Sentiment Analysis", bg="red", fg="white")
+        heading2 = Label(self.root, text=heading_text, bg="red", fg="white")
         heading2.pack(pady=(10, 20))
         heading2.configure(font=("verdana", 14))
 
         label1 = Label(self.root, text="Enter the text")
         label1.pack(pady=(20, 10))
-        self.sentiment_input = Entry(self.root, width=30)
-        self.sentiment_input.pack(pady=(5, 10), ipady=3)
+        self.nlp_task_input = Entry(self.root, width=30)
+        self.nlp_task_input.pack(pady=(5, 10), ipady=3)
 
-        sentiment_btn = Button(self.root, text="Analyze Sentiment", command = self.do_sentiment_analysis)
-        sentiment_btn.pack(pady=(10, 10))
+        nlp_btn = Button(self.root, text=button_text, command = lambda: self.do_nlp_task(task))
+        nlp_btn.pack(pady=(10, 10))
 
-        self.sentiment_result = Label(self.root, text="", bg = "red", fg = "white")
-        self.sentiment_result.pack(pady=(20, 10))
-        self.sentiment_result.configure(font=("verdana", 12))
+        self.nlp_task_result = Label(self.root, text="", bg = "red", fg = "white")
+        self.nlp_task_result.pack(pady=(20, 10))
+        self.nlp_task_result.configure(font=("verdana", 12, "bold"))
 
         goback_btn = Button(self.root, text="Go Back", command = self.home_gui)
         goback_btn.pack(pady=(10, 10))
 
+    
+    def do_nlp_task(self, task):
+        text = self.nlp_task_input.get()
+        result = self.apio.nlp_task(task, text)
+        self.nlp_task_result["text"] = result
 
-    def do_sentiment_analysis(self):
 
 
 nlp = NLPApp()
